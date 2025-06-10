@@ -6,9 +6,9 @@
     <title>AI News Analysis</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
     <style>
-        /* Your styles, respecting your width change */
+        /* A little extra styling */
         body { padding-top: 2rem; padding-bottom: 2rem; }
-        main { max-width: 880px; } /* I've set this to 880px, feel free to adjust! */
+        main { max-width: 880px; }
         article {
             border: 1px solid var(--pico-muted-border-color);
             padding: 1.5rem;
@@ -31,14 +31,77 @@
             border-left: 3px solid var(--pico-secondary-border);
             font-style: italic;
         }
+        .subscribe-section {
+            text-align: center;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background-color: var(--pico-muted-background-color);
+            border-radius: var(--pico-border-radius);
+        }
+        .subscribe-section form {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .subscribe-section input[type="email"] {
+            margin-bottom: 0;
+            width: 350px;
+        }
+        .subscribe-section button {
+            margin-bottom: 0;
+            width: auto;
+        }
+        /* Styles for Flash Messages */
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: var(--pico-border-radius);
+            text-align: center;
+            border: 1px solid;
+        }
+        .flash-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .flash-error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .flash-info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
     </style>
 </head>
 <body>
+
     <main class="container">
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <header style="text-align: center;">
             <h1>AI News Analysis Pipeline</h1>
             <p>Your daily digest of the latest in Artificial Intelligence</p>
         </header>
+
+        <section class="subscribe-section">
+            <form action="/subscribe" method="POST">
+                <input type="email" name="email" placeholder="Enter your email for daily digests..." required>
+                <button type="submit">Subscribe</button>
+            </form>
+        </section>
+
+        <hr>
 
         <section id="trending-news">
             <h2>Trending AI News</h2>
@@ -54,9 +117,7 @@
             </div>
         </section>
 
-        <hr>
-
-        {% if not grouped_articles %}
+        <hr> {% if not grouped_articles %}
             <article>
                 <p>No articles found in the database. Run main.py to fetch and analyze news.</p>
             </article>
@@ -65,13 +126,16 @@
         {% for category, articles_in_category in grouped_articles.items()|sort %}
             <h2 class="category-header">{{ category }}</h2>
 
-            {% for article in articles_in_category[:5] %}
+            {% for article in articles_in_category %}
                 <article>
                     <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
+                    
                     <p class="metadata">
                         <small>Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></small>
                     </p>
+
                     <p class="summary">{{ article['summary'] }}</p>
+
                     <details>
                         <summary>View Full Analysis</summary>
                         <ul>
@@ -82,22 +146,8 @@
                     </details>
                 </article>
             {% endfor %}
-
-            {% if articles_in_category|length > 5 %}
-                <details>
-                    <summary>Show {{ articles_in_category|length - 5 }} older articles...</summary>
-                    {% for article in articles_in_category[5:] %}
-                        <article>
-                            <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
-                             <p class="metadata">
-                                <small>Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></small>
-                            </p>
-                            <p class="summary">{{ article['summary'] }}</p>
-                        </article>
-                    {% endfor %}
-                </details>
-            {% endif %}
         {% endfor %}
     </main>
+
 </body>
 </html>
