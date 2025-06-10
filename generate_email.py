@@ -1,3 +1,4 @@
+# generate_email.py - FINAL VERSION
 import os
 import requests
 import psycopg2
@@ -9,6 +10,8 @@ from dateutil import parser
 
 load_dotenv()
 app = Flask(__name__)
+
+# --- HELPER FUNCTIONS COPIED FROM APP.PY ---
 
 def get_db_connection():
     """Establishes a connection to the PostgreSQL database."""
@@ -28,7 +31,7 @@ def format_date(date_string):
 app.jinja_env.filters['format_date'] = format_date
 
 def fetch_trending_news():
-    """Fetches trending AI news from the NewsAPI."""
+    """Fetches trending AI news from the NewsAPI, excluding paywalled sites."""
     api_key = os.getenv("NEWS_API_KEY")
     if not api_key: return []
     excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
@@ -41,9 +44,11 @@ def fetch_trending_news():
         print(f"Error fetching trending news: {e}")
         return []
 
-def generate_email_content():
-    """Queries the DB for recent articles and generates an HTML file."""
-    print("Fetching live trending news...")
+# --- MAIN FUNCTION ---
+
+def generate_email_html():
+    """Queries the DB and returns the email content as an HTML string, or None."""
+    print("Fetching news for email digest...")
     trending_articles = fetch_trending_news()
     
     print("Connecting to database for analyzed articles...")
@@ -51,17 +56,16 @@ def generate_email_content():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cut_off_date = datetime.now(timezone.utc) - timedelta(days=1)
     
-    # Use %s for PostgreSQL placeholders
     cur.execute('SELECT * FROM articles WHERE created_at >= %s ORDER BY category, published_at DESC', (cut_off_date,))
     db_articles = cur.fetchall()
     cur.close()
     conn.close()
-    print(f"Found {len(db_articles)} new analyzed articles from the last 24 hours.")
-
+    
     if not db_articles and not trending_articles:
-        print("No new content to report. No email will be generated.")
-        return
+        print("No new content to report.")
+        return None
 
+    print(f"Found {len(db_articles)} analyzed articles and {len(trending_articles)} trending articles.")
     with app.app_context():
         html_output = render_template(
             'email_template.html', 
@@ -69,10 +73,12 @@ def generate_email_content():
             trending_articles=trending_articles,
             today=datetime.now().strftime('%B %d, %Y')
         )
+    return html_output
 
-    with open('daily_digest.html', 'w', encoding='utf-8') as f:
-        f.write(html_output)
-    print("Successfully generated 'daily_digest.html'. Please review it before sending.")
-
+# This block lets you run this file manually to create the preview file
 if __name__ == '__main__':
-    generate_email_content()
+    html = generate_email_html()
+    if html:
+        with open('daily_digest.html', 'w', encoding='utf-8') as f:
+            f.write(html)
+        print("Successfully generated 'daily_digest.html' for review.")
