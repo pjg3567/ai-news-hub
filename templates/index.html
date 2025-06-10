@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Analysis</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+    <style>
+        /* Your styles, respecting your width change */
+        body { padding-top: 2rem; padding-bottom: 2rem; }
+        main { max-width: 880px; } /* I've set this to 880px, feel free to adjust! */
+        article {
+            border: 1px solid var(--pico-muted-border-color);
+            padding: 1.5rem;
+            border-radius: var(--pico-border-radius);
+            margin-bottom: 1rem;
+        }
+        .category-header {
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--pico-primary);
+            color: var(--pico-primary);
+        }
+        .metadata {
+            color: var(--pico-muted-color);
+        }
+        .summary {
+            margin-top: 1rem;
+            padding-left: 1rem;
+            border-left: 3px solid var(--pico-secondary-border);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header style="text-align: center;">
+            <h1>AI News Analysis Pipeline</h1>
+            <p>Your daily digest of the latest in Artificial Intelligence</p>
+        </header>
+
+        <section id="trending-news">
+            <h2>Trending AI News</h2>
+            <div class="grid">
+                {% for trend in trending_articles %}
+                    <article>
+                        <h6><a href="{{ trend.url }}" target="_blank" title="{{ trend.description }}">{{ trend.title }}</a></h6>
+                        <p><small>Source: <strong>{{ trend.source.name }}</strong></small></p>
+                    </article>
+                {% else %}
+                    <p>Could not load trending news at this time.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <hr>
+
+        {% if not grouped_articles %}
+            <article>
+                <p>No articles found in the database. Run main.py to fetch and analyze news.</p>
+            </article>
+        {% endif %}
+
+        {% for category, articles_in_category in grouped_articles.items()|sort %}
+            <h2 class="category-header">{{ category }}</h2>
+
+            {% for article in articles_in_category[:5] %}
+                <article>
+                    <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
+                    <p class="metadata">
+                        <small>Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></small>
+                    </p>
+                    <p class="summary">{{ article['summary'] }}</p>
+                    <details>
+                        <summary>View Full Analysis</summary>
+                        <ul>
+                            <li><strong>Core Innovation:</strong> {{ article['innovation'] }}</li>
+                            <li><strong>Impacted Parties:</strong> {{ article['impact'] }}</li>
+                            <li><strong>Future Advancements:</strong> {{ article['future'] }}</li>
+                        </ul>
+                    </details>
+                </article>
+            {% endfor %}
+
+            {% if articles_in_category|length > 5 %}
+                <details>
+                    <summary>Show {{ articles_in_category|length - 5 }} older articles...</summary>
+                    {% for article in articles_in_category[5:] %}
+                        <article>
+                            <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
+                             <p class="metadata">
+                                <small>Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></small>
+                            </p>
+                            <p class="summary">{{ article['summary'] }}</p>
+                        </article>
+                    {% endfor %}
+                </details>
+            {% endif %}
+        {% endfor %}
+    </main>
+</body>
+</html>

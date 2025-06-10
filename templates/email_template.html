@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your AI News Digest</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 20px; border-radius: 8px; }
+        .header { text-align: center; padding-bottom: 20px; border-bottom: 1px solid #dddddd; }
+        .section-header { margin-top: 30px; font-size: 20px; color: #333333; border-bottom: 2px solid #0056b3; padding-bottom: 5px; }
+        .article { margin-bottom: 20px; padding-left: 10px; border-left: 3px solid #f0f0f0; }
+        .article h4 { margin: 0 0 5px 0; }
+        .article a { color: #0056b3; text-decoration: none; }
+        .metadata { color: #777777; font-size: 12px; }
+        .summary { font-style: italic; color: #555555; padding-left: 10px; margin-top: 10px; }
+        .separator { border-top: 1px solid #cccccc; margin: 30px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI News Digest</h1>
+            <p>Your summary for {{ today }}</p>
+        </div>
+
+        <h2 class="section-header">Trending AI News</h2>
+        {% for trend in trending_articles %}
+            <div class="article">
+                <h4><a href="{{ trend.url }}" target="_blank">{{ trend.title }}</a></h4>
+                <p class="metadata">Source: <strong>{{ trend.source.name }}</strong></p>
+            </div>
+        {% else %}
+            <p>Could not load trending news.</p>
+        {% endfor %}
+        
+        <hr class="separator">
+
+        <h2 class="section-header">From Your Monitored Sources</h2>
+        {% for article in articles %}
+            {% if loop.changed(article.category) %}
+                <h3 style="color: #444;">{{ article.category }}</h3>
+            {% endif %}
+            <div class="article">
+                <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
+                <p class="metadata">Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></p>
+                <p class="summary">{{ article['summary'] }}</p>
+            </div>
+        {% endfor %}
+
+<hr class="separator">
+        <div style="text-align: center; font-size: 12px; color: #777777;">
+            <p>For more details and a full history, visit your<br><a href="http://127.0.0.1:5000">AI News Dashboard</a>.</p>
+        </div>
+
+    </div> 
+</body>
+</html>

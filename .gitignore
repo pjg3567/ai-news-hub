@@ -1,0 +1,16 @@
+# Environment variables containing secret keys
+.env
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# SQLite Database file
+*.db
+*.db-journal
+
+# VS Code settings folder
+.vscode/
+
+# Generated HTML files
+daily_digest.html
