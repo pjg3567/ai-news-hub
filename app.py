@@ -54,17 +54,49 @@ def format_date(date_string):
 app.jinja_env.filters['format_date'] = format_date
 
 def fetch_trending_news():
-    """Fetches trending AI news from the NewsAPI, excluding paywalled sites."""
+    """
+    Fetches trending AI news from the NewsAPI, ensuring a diversity of sources.
+    """
     api_key = os.getenv("NEWS_API_KEY")
     if not api_key:
         print("NEWS_API_KEY not found in .env file.")
         return []
+    
     excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
-    url = f"https://newsapi.org/v2/everything?q=(Artificial Intelligence OR AI OR LLM)&language=en&sortBy=popularity&excludeDomains={excluded_domains}&apiKey={api_key}"
+    
+    # We ask for more articles (e.g., 40) to have a good pool to select from
+    url = (
+        "https://newsapi.org/v2/everything?"
+        "q=(Artificial Intelligence OR AI OR LLM OR OpenAI OR DeepMind OR Anthropic)&"
+        "language=en&"
+        "sortBy=popularity&"
+        "pageSize=40&"  # Ask for more articles
+        f"excludeDomains={excluded_domains}&"
+        "apiKey=" + api_key
+    )
+    
     try:
         response = requests.get(url)
         response.raise_for_status()
-        return response.json().get('articles', [])[:5]
+        all_articles = response.json().get('articles', [])
+        
+        # --- NEW DIVERSIFICATION LOGIC ---
+        diverse_articles = []
+        used_sources = set() # Keep track of sources we've already added
+
+        for article in all_articles:
+            source_name = article.get('source', {}).get('name')
+            if source_name and source_name not in used_sources:
+                diverse_articles.append(article)
+                used_sources.add(source_name)
+            
+            # Stop once we have 5 diverse articles
+            if len(diverse_articles) >= 5:
+                break
+        
+        return diverse_articles
+        # --- END OF NEW LOGIC ---
+
     except requests.exceptions.RequestException as e:
         print(f"Error fetching trending news: {e}")
         return []
@@ -74,7 +106,17 @@ def index():
     """The main route of the web application."""
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute('SELECT * FROM articles ORDER BY published_at DESC')
+    # The correct, advanced sorting query
+    cur.execute('''
+        SELECT * FROM articles 
+        ORDER BY
+            CASE
+                WHEN category = 'New Research Paper' THEN 0
+                WHEN category = 'New Model Release' THEN 1
+                ELSE 2
+            END,
+            published_at DESC
+    ''')
     db_articles = cur.fetchall()
     cur.close()
     conn.close()

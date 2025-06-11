@@ -8,7 +8,7 @@
     <style>
         /* A little extra styling */
         body { padding-top: 2rem; padding-bottom: 2rem; }
-        main { max-width: 880px; }
+        main { max-width: 700px; }
         article {
             border: 1px solid var(--pico-muted-border-color);
             padding: 1.5rem;
@@ -78,7 +78,6 @@
     </style>
 </head>
 <body>
-
     <main class="container">
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -117,25 +116,24 @@
             </div>
         </section>
 
-        <hr> {% if not grouped_articles %}
+        <hr> 
+
+        {% if not grouped_articles %}
             <article>
                 <p>No articles found in the database. Run main.py to fetch and analyze news.</p>
             </article>
         {% endif %}
 
-        {% for category, articles_in_category in grouped_articles.items()|sort %}
+        {% for category, articles_in_category in grouped_articles.items() %}
             <h2 class="category-header">{{ category }}</h2>
 
-            {% for article in articles_in_category %}
+            {% for article in articles_in_category[:5] %}
                 <article>
                     <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
-                    
                     <p class="metadata">
                         <small>Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></small>
                     </p>
-
                     <p class="summary">{{ article['summary'] }}</p>
-
                     <details>
                         <summary>View Full Analysis</summary>
                         <ul>
@@ -146,8 +144,21 @@
                     </details>
                 </article>
             {% endfor %}
+
+            {% if articles_in_category|length > 5 %}
+                <details>
+                    <summary style="font-size: 0.9em; text-align: center;">Show {{ articles_in_category|length - 5 }} older articles in this category...</summary>
+                    {% for article in articles_in_category[5:] %}
+                        <article style="background-color: var(--pico-muted-background-color);">
+                            <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
+                            <p class="metadata">
+                                <small>Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></small>
+                            </p>
+                        </article>
+                    {% endfor %}
+                </details>
+            {% endif %}
         {% endfor %}
     </main>
-
 </body>
 </html>
