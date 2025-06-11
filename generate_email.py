@@ -83,16 +83,16 @@ def fetch_trending_news():
 # --- MAIN FUNCTION ---
 
 def generate_email_html():
-    """Queries the DB, groups articles, and returns the email content as an HTML string."""
+    """Queries the DB, groups articles, and returns the email content as an HTML string, or None."""
     print("Fetching news for email digest...")
     trending_articles = fetch_trending_news()
-
+    
     print("Connecting to database for analyzed articles...")
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cut_off_date = datetime.now(timezone.utc) - timedelta(days=1)
-
-    # This query already sorts correctly by category, then date
+    
+    # --- THIS IS THE CORRECTED QUERY ---
     cur.execute('''
         SELECT * FROM articles 
         WHERE created_at >= %s
@@ -104,13 +104,30 @@ def generate_email_html():
             END,
             published_at DESC
     ''', (cut_off_date,))
+    # --- END OF CORRECTION ---
     db_articles = cur.fetchall()
     cur.close()
     conn.close()
-
+    
     if not db_articles and not trending_articles:
         print("No new content to report.")
         return None
+
+    # This logic correctly groups the sorted articles
+    grouped_articles = defaultdict(list)
+    for article in db_articles:
+        grouped_articles[article['category']].append(dict(article))
+
+    print(f"Found {len(db_articles)} analyzed articles and {len(trending_articles)} trending articles.")
+    with app.app_context():
+        html_output = render_template(
+            'email_template.html', 
+            grouped_articles=grouped_articles, # Pass the grouped dictionary
+            trending_articles=trending_articles,
+            today=datetime.now().strftime('%B %d, %Y'),
+            webapp_url=os.getenv("RENDER_URL", "http://127.0.0.1:5000")
+        )
+    return html_output
 
     # --- NEW: Group articles by category, just like in app.py ---
     grouped_articles = defaultdict(list)
