@@ -15,15 +15,33 @@ load_dotenv()
 
 # --- CONFIGURATION ---
 SOURCES = {
+    # == Primary Research Labs & Corporations ==
+    "OpenAI Blog": "https://openai.com/blog/rss.xml",
+    "DeepMind Blog": "https://deepmind.google/blog/rss/",
+    "Google AI Blog": "https://blog.google/technology/ai/rss/",
+    "Meta AI Blog": "https://ai.meta.com/blog/rss/",
+    "Microsoft AI Blog": "https://blogs.microsoft.com/ai/feed/",
+    "Anthropic Blog": "https://www.anthropic.com/news/rss.xml",
+
+    # == Academic & Pre-Print ==
     "arXiv: AI": "https://arxiv.org/rss/cs.AI",
     "arXiv: Computation and Language": "https://arxiv.org/rss/cs.CL",
     "arXiv: Machine Learning": "https://arxiv.org/rss/cs.LG",
-    "Google AI Blog": "https://blog.google/technology/ai/rss/",
-    "DeepMind Blog": "https://deepmind.google/blog/rss/",
-    "OpenAI Blog": "https://openai.com/blog/rss.xml",
-    "Microsoft AI Blog": "https://blogs.microsoft.com/ai/feed/",
-    "Meta AI Blog": "https://ai.meta.com/blog/rss/",
-    "Anthropic Blog": "https://www.anthropic.com/news/rss.xml",
+
+    # == Open Source & Community ==
+    "Hugging Face Blog": "https://huggingface.co/blog/feed.xml",
+
+    # == Hardware & Infrastructure ==
+    "NVIDIA AI Blog": "https://blogs.nvidia.com/ai-data-science/feed/",
+    
+    # == High-Signal Newsletters & Analysis ==
+    "Import AI": "https://importai.net/feed",
+    "The Gradient": "https://thegradient.pub/rss/",
+
+    # == Venture Capital & Business ==
+    "a16z Blog": "https://a16z.com/feed/",
+
+    # == Tech Journalism ==
     "VentureBeat AI": "https://feeds.feedburner.com/venturebeat/SZYF"
 }
 TIME_WINDOW_DAYS = 3
