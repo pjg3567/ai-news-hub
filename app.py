@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 app = Flask(__name__)
-# Use an environment variable for the secret key in production
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "a_strong_default_secret_key_for_dev")
 
 def setup_database():
@@ -45,7 +44,7 @@ def format_date(date_string):
     """Parses a date string and formats it nicely."""
     if not date_string: return "No Date Provided"
     try:
-        if hasattr(date_string, 'strftime'): # Handle if it's already a datetime object
+        if hasattr(date_string, 'strftime'):
             return date_string.strftime('%B %d, %Y')
         return parser.parse(date_string).strftime('%B %d, %Y')
     except (ValueError, TypeError):
@@ -54,49 +53,20 @@ def format_date(date_string):
 app.jinja_env.filters['format_date'] = format_date
 
 def fetch_trending_news():
-    """
-    Fetches trending AI news from the NewsAPI, ensuring a diversity of sources.
-    """
+    """Fetches trending AI news from the NewsAPI."""
     api_key = os.getenv("NEWS_API_KEY")
     if not api_key:
         print("NEWS_API_KEY not found in .env file.")
         return []
     
-    excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
-    
-    # We ask for more articles (e.g., 40) to have a good pool to select from
-    url = (
-        "https://newsapi.org/v2/everything?"
-        "q=(Artificial Intelligence OR AI OR LLM OR OpenAI OR DeepMind OR Anthropic)&"
-        "language=en&"
-        "sortBy=popularity&"
-        "pageSize=40&"  # Ask for more articles
-        f"excludeDomains={excluded_domains}&"
-        "apiKey=" + api_key
-    )
+    excluded_domains = "wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk,wired.com"
+    url = f"https://newsapi.org/v2/everything?q=(Artificial Intelligence OR AI OR LLM)&language=en&sortBy=popularity&excludeDomains={excluded_domains}&apiKey={api_key}"
     
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10) # Added a timeout
         response.raise_for_status()
-        all_articles = response.json().get('articles', [])
-        
-        # --- NEW DIVERSIFICATION LOGIC ---
-        diverse_articles = []
-        used_sources = set() # Keep track of sources we've already added
-
-        for article in all_articles:
-            source_name = article.get('source', {}).get('name')
-            if source_name and source_name not in used_sources:
-                diverse_articles.append(article)
-                used_sources.add(source_name)
-            
-            # Stop once we have 5 diverse articles
-            if len(diverse_articles) >= 5:
-                break
-        
-        return diverse_articles
-        # --- END OF NEW LOGIC ---
-
+        data = response.json()
+        return data.get('articles', [])[:5]
     except requests.exceptions.RequestException as e:
         print(f"Error fetching trending news: {e}")
         return []
@@ -120,6 +90,18 @@ def index():
     db_articles = cur.fetchall()
     cur.close()
     conn.close()
+
+    # --- START OF DEBUG BLOCK ---
+    if db_articles:
+        # Get the very first article from the sorted list
+        first_article = db_articles[0]
+        print("\n--- DEBUG: RAW DATA FOR LATEST ARTICLE ---")
+        print(f"  Title: {first_article['title']}")
+        print(f"  Source: {first_article['source_name']}")
+        print(f"  PUBLISHED_AT from DB: {first_article['published_at']}")
+        print(f"  CREATED_AT from DB:   {first_article['created_at']}")
+        print("--------------------------------------------\n")
+    # --- END OF DEBUG BLOCK ---
 
     grouped_articles = defaultdict(list)
     for article in db_articles:
@@ -153,7 +135,8 @@ def subscribe():
         conn.close()
     return redirect(url_for('index'))
 
-# This block ensures setup_database() is called before the first request in a development environment
+# This block ensures setup_database() is called before the first request
+# in a development environment or when the app boots on Render.
 with app.app_context():
     setup_database()
 
