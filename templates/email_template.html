@@ -35,20 +35,28 @@
         <hr class="separator">
 
         <h2 class="section-header">From Your Monitored Sources</h2>
-        {% for article in articles %}
-            {% if loop.changed(article.category) %}
-                <h3 style="color: #444;">{{ article.category }}</h3>
+        {% for category, articles_in_category in grouped_articles.items() %}
+            <h3 style="color: #444;">{{ category }}</h3>
+            
+            {% for article in articles_in_category[:5] %}
+                <div class="article">
+                    <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
+                    <p class="metadata">Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></p>
+                    <p class="summary">{{ article['summary'] }}</p>
+                </div>
+            {% endfor %}
+
+            {% if articles_in_category|length > 5 %}
+                <div style="text-align: right; margin-top: -10px; margin-bottom: 20px;">
+                    <a href="{{ webapp_url }}" target="_blank" style="font-size: 12px;">...and {{ articles_in_category|length - 5 }} more. View all on dashboard &rarr;</a>
+                </div>
             {% endif %}
-            <div class="article">
-                <h4><a href="{{ article['url'] }}" target="_blank">{{ article['title'] }}</a></h4>
-                <p class="metadata">Published: {{ article['published_at'] | format_date }} by <strong>{{ article['source_name'] }}</strong></p>
-                <p class="summary">{{ article['summary'] }}</p>
-            </div>
+
         {% endfor %}
 
-<hr class="separator">
+        <hr class="separator">
         <div style="text-align: center; font-size: 12px; color: #777777;">
-            <p>For more details and a full history, visit your<br><a href="http://127.0.0.1:5000">AI News Dashboard</a>.</p>
+            <p>For a full history, visit your<br><a href="{{ webapp_url }}" target="_blank">AI News Dashboard</a>.</p>
         </div>
 
     </div> 

@@ -7,6 +7,7 @@ from flask import Flask, render_template
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from dateutil import parser
+from collections import defaultdict
 
 load_dotenv()
 app = Flask(__name__)
@@ -41,28 +42,29 @@ def fetch_trending_news():
     
     excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
     
-    # We ask for more articles (e.g., 40) to have a good pool to select from
+    # We ask for a larger pool of articles to ensure we can find diverse sources
     url = (
         "https://newsapi.org/v2/everything?"
         "q=(Artificial Intelligence OR AI OR LLM OR OpenAI OR DeepMind OR Anthropic)&"
         "language=en&"
         "sortBy=popularity&"
-        "pageSize=40&"  # Ask for more articles
+        "pageSize=40&"
         f"excludeDomains={excluded_domains}&"
         "apiKey=" + api_key
     )
     
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
         all_articles = response.json().get('articles', [])
         
-        # --- NEW DIVERSIFICATION LOGIC ---
+        # --- Source Diversification Logic ---
         diverse_articles = []
         used_sources = set() # Keep track of sources we've already added
 
         for article in all_articles:
             source_name = article.get('source', {}).get('name')
+            # Add the article if the source is new to our list
             if source_name and source_name not in used_sources:
                 diverse_articles.append(article)
                 used_sources.add(source_name)
@@ -72,7 +74,7 @@ def fetch_trending_news():
                 break
         
         return diverse_articles
-        # --- END OF NEW LOGIC ---
+        # --- End of Logic ---
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching trending news: {e}")
@@ -81,31 +83,39 @@ def fetch_trending_news():
 # --- MAIN FUNCTION ---
 
 def generate_email_html():
-    """Queries the DB and returns the email content as an HTML string, or None."""
+    """Queries the DB, groups articles, and returns the email content as an HTML string."""
     print("Fetching news for email digest...")
     trending_articles = fetch_trending_news()
-    
+
     print("Connecting to database for analyzed articles...")
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     cut_off_date = datetime.now(timezone.utc) - timedelta(days=1)
-    
+
+    # This query already sorts correctly by category, then date
     cur.execute('SELECT * FROM articles WHERE created_at >= %s ORDER BY category, published_at DESC', (cut_off_date,))
     db_articles = cur.fetchall()
     cur.close()
     conn.close()
-    
+
     if not db_articles and not trending_articles:
         print("No new content to report.")
         return None
+
+    # --- NEW: Group articles by category, just like in app.py ---
+    grouped_articles = defaultdict(list)
+    for article in db_articles:
+        grouped_articles[article['category']].append(dict(article))
+    # -----------------------------------------------------------
 
     print(f"Found {len(db_articles)} analyzed articles and {len(trending_articles)} trending articles.")
     with app.app_context():
         html_output = render_template(
             'email_template.html', 
-            articles=db_articles, 
+            grouped_articles=grouped_articles, # Pass the grouped dictionary
             trending_articles=trending_articles,
-            today=datetime.now().strftime('%B %d, %Y')
+            today=datetime.now().strftime('%B %d, %Y'),
+            webapp_url=os.getenv("RENDER_URL", "http://127.0.0.1:5000") # Pass the web app URL
         )
     return html_output
 

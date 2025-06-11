@@ -53,20 +53,50 @@ def format_date(date_string):
 app.jinja_env.filters['format_date'] = format_date
 
 def fetch_trending_news():
-    """Fetches trending AI news from the NewsAPI."""
+    """
+    Fetches trending AI news from the NewsAPI, ensuring a diversity of sources.
+    """
     api_key = os.getenv("NEWS_API_KEY")
     if not api_key:
         print("NEWS_API_KEY not found in .env file.")
         return []
     
-    excluded_domains = "wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk,wired.com"
-    url = f"https://newsapi.org/v2/everything?q=(Artificial Intelligence OR AI OR LLM)&language=en&sortBy=popularity&excludeDomains={excluded_domains}&apiKey={api_key}"
+    excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
+    
+    # We ask for a larger pool of articles to ensure we can find diverse sources
+    url = (
+        "https://newsapi.org/v2/everything?"
+        "q=(Artificial Intelligence OR AI OR LLM OR OpenAI OR DeepMind OR Anthropic)&"
+        "language=en&"
+        "sortBy=popularity&"
+        "pageSize=40&"
+        f"excludeDomains={excluded_domains}&"
+        "apiKey=" + api_key
+    )
     
     try:
-        response = requests.get(url, timeout=10) # Added a timeout
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
-        data = response.json()
-        return data.get('articles', [])[:5]
+        all_articles = response.json().get('articles', [])
+        
+        # --- Source Diversification Logic ---
+        diverse_articles = []
+        used_sources = set() # Keep track of sources we've already added
+
+        for article in all_articles:
+            source_name = article.get('source', {}).get('name')
+            # Add the article if the source is new to our list
+            if source_name and source_name not in used_sources:
+                diverse_articles.append(article)
+                used_sources.add(source_name)
+            
+            # Stop once we have 5 diverse articles
+            if len(diverse_articles) >= 5:
+                break
+        
+        return diverse_articles
+        # --- End of Logic ---
+
     except requests.exceptions.RequestException as e:
         print(f"Error fetching trending news: {e}")
         return []
@@ -76,7 +106,7 @@ def index():
     """The main route of the web application."""
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    # The correct, advanced sorting query
+    # The final, correct sorting query
     cur.execute('''
         SELECT * FROM articles 
         ORDER BY
@@ -90,18 +120,6 @@ def index():
     db_articles = cur.fetchall()
     cur.close()
     conn.close()
-
-    # --- START OF DEBUG BLOCK ---
-    if db_articles:
-        # Get the very first article from the sorted list
-        first_article = db_articles[0]
-        print("\n--- DEBUG: RAW DATA FOR LATEST ARTICLE ---")
-        print(f"  Title: {first_article['title']}")
-        print(f"  Source: {first_article['source_name']}")
-        print(f"  PUBLISHED_AT from DB: {first_article['published_at']}")
-        print(f"  CREATED_AT from DB:   {first_article['created_at']}")
-        print("--------------------------------------------\n")
-    # --- END OF DEBUG BLOCK ---
 
     grouped_articles = defaultdict(list)
     for article in db_articles:
