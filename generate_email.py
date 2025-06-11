@@ -93,7 +93,17 @@ def generate_email_html():
     cut_off_date = datetime.now(timezone.utc) - timedelta(days=1)
 
     # This query already sorts correctly by category, then date
-    cur.execute('SELECT * FROM articles WHERE created_at >= %s ORDER BY category, published_at DESC', (cut_off_date,))
+    cur.execute('''
+        SELECT * FROM articles 
+        WHERE created_at >= %s
+        ORDER BY
+            CASE
+                WHEN category = 'New Research Paper' THEN 0
+                WHEN category = 'New Model Release' THEN 1
+                ELSE 2
+            END,
+            published_at DESC
+    ''', (cut_off_date,))
     db_articles = cur.fetchall()
     cur.close()
     conn.close()
