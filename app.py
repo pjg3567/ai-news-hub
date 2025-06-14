@@ -54,21 +54,28 @@ app.jinja_env.filters['format_date'] = format_date
 
 def fetch_trending_news():
     """
-    Fetches trending AI news from the NewsAPI, ensuring a diversity of sources.
+    Fetches trending AI news from the last 24 hours, ensuring a diversity of sources.
     """
     api_key = os.getenv("NEWS_API_KEY")
     if not api_key:
         print("NEWS_API_KEY not found in .env file.")
         return []
+
+    # --- NEW: Date Filtering Logic ---
+    from datetime import datetime, timedelta
+    # Get yesterday's date in the required format (YYYY-MM-DD)
+    yesterday = datetime.now() - timedelta(days=1)
+    from_date_str = yesterday.strftime('%Y-%m-%d')
+    # --- END OF NEW LOGIC ---
     
     excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
     
-    # We ask for a larger pool of articles to ensure we can find diverse sources
     url = (
         "https://newsapi.org/v2/everything?"
         "q=(Artificial Intelligence OR AI OR LLM OR OpenAI OR DeepMind OR Anthropic)&"
         "language=en&"
         "sortBy=popularity&"
+        f"from={from_date_str}&"  # <-- ADDED DATE FILTER
         "pageSize=40&"
         f"excludeDomains={excluded_domains}&"
         "apiKey=" + api_key
@@ -79,23 +86,21 @@ def fetch_trending_news():
         response.raise_for_status()
         all_articles = response.json().get('articles', [])
         
-        # --- Source Diversification Logic ---
+        # Source Diversification Logic
         diverse_articles = []
-        used_sources = set() # Keep track of sources we've already added
+        used_sources = set()
 
         for article in all_articles:
             source_name = article.get('source', {}).get('name')
-            # Add the article if the source is new to our list
             if source_name and source_name not in used_sources:
                 diverse_articles.append(article)
                 used_sources.add(source_name)
             
-            # Stop once we have 5 diverse articles
             if len(diverse_articles) >= 5:
                 break
         
+        print(f"Found {len(diverse_articles)} fresh trending articles.")
         return diverse_articles
-        # --- End of Logic ---
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching trending news: {e}")
