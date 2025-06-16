@@ -33,28 +33,29 @@ app.jinja_env.filters['format_date'] = format_date
 
 def fetch_trending_news():
     """
-    Fetches trending AI news from the last 24 hours, ensuring a diversity of sources.
+    Fetches trending AI news from the last 24 hours, ensuring relevance and source diversity.
     """
     api_key = os.getenv("NEWS_API_KEY")
     if not api_key:
         print("NEWS_API_KEY not found in .env file.")
         return []
 
-    # --- NEW: Date Filtering Logic ---
+    # --- Date Filtering Logic ---
     from datetime import datetime, timedelta
-    # Get yesterday's date in the required format (YYYY-MM-DD)
     yesterday = datetime.now() - timedelta(days=1)
     from_date_str = yesterday.strftime('%Y-%m-%d')
-    # --- END OF NEW LOGIC ---
+    # --------------------------
     
-    excluded_domains = "wired.com,wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
+    # More precise query targeting titles
+    query = '("Artificial Intelligence" OR "AI" OR "LLM" OR "OpenAI" OR "DeepMind" OR "Anthropic")'
+    excluded_domains = "wsj.com,nytimes.com,bloomberg.com,ft.com,thetimes.co.uk"
     
     url = (
         "https://newsapi.org/v2/everything?"
-        "q=(Artificial Intelligence OR AI OR LLM OR OpenAI OR DeepMind OR Anthropic)&"
+        f"qInTitle={query}&"
         "language=en&"
         "sortBy=popularity&"
-        f"from={from_date_str}&"  # <-- ADDED DATE FILTER
+        f"from={from_date_str}&"  #<-- DATE FILTER IS NOW INCLUDED
         "pageSize=40&"
         f"excludeDomains={excluded_domains}&"
         "apiKey=" + api_key
@@ -78,7 +79,7 @@ def fetch_trending_news():
             if len(diverse_articles) >= 5:
                 break
         
-        print(f"Found {len(diverse_articles)} fresh trending articles.")
+        print(f"Found {len(diverse_articles)} fresh, relevant trending articles.")
         return diverse_articles
 
     except requests.exceptions.RequestException as e:
